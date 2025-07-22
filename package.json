@@ -1,0 +1,36 @@
+{
+  "name": "free-cloud-storage-core",
+  "version": "0.0.2",
+  "description": "Provide a unified API for accessing some free cloud storage services.提供统一的API接入一些免费的云盘",
+  "main": "dist/cjs/index.js",
+  "types": "dist/cjs/index.d.ts",
+  "scripts": {
+    "dev": "father dev",
+    "build": "father build",
+    "build:deps": "father prebundle",
+    "prepublishOnly": "father doctor && npm run build"
+  },
+  "keywords": [],
+  "authors": [
+    "听风 <linktodream@163.com>"
+  ],
+  "license": "Apache License 2.0",
+  "files": [
+    "dist",
+    "compiled"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/path-browserify": "^1.0.3",
+    "father": "^4.5.6"
+  },
+  "dependencies": {
+    "acorn": "^8.15.0",
+    "acorn-walk": "^8.3.4",
+    "cheerio": "^1.1.0",
+    "path-browserify": "^1.0.1"
+  },
+  "packageManager": "pnpm@8.15.5+sha1.a58c038faac410c947dbdb93eb30994037d0fce2"
+}
