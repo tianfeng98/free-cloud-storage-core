@@ -1,6 +1,6 @@
 import { browserFetch } from "@/utils";
 import { join } from "path-browserify";
-import { type ResourceDto } from "./types";
+import { type FileBrowserResponse, type ResourceDto } from "./types";
 
 type Auth = { username: string; password: string } | string;
 
@@ -63,6 +63,11 @@ export class FileBrowser {
     isAfterAuth = false
   ): Promise<Response> {
     const jwt = await this.getJwt();
+    if (!jwt) {
+      return new Response("FileBrowser jwt is empty", {
+        status: 401,
+      });
+    }
     const { headers, ...otherInit } = requestInit;
     const res = await this.request(api, {
       headers: {
@@ -80,9 +85,8 @@ export class FileBrowser {
 
     switch (status) {
       case 401:
-      case 403:
         if (isAfterAuth) {
-          return new Response("FileBrowser Login failed", {
+          return new Response("FileBrowser Auth failed", {
             status,
           });
         }
@@ -105,15 +109,28 @@ export class FileBrowser {
       this.setCacheJwt?.(jwt);
       return jwt;
     }
-    const res = await this.request("/api/login", {
-      method: "POST",
-      body: JSON.stringify(this.auth),
-    });
-    if (res.status !== 200) {
-      throw new Error("Login failed");
+    if (typeof this.auth === "object") {
+      const res = await this.request(
+        {
+          pathname: "/api/auth/login",
+          query: {
+            username: this.auth.username,
+          },
+        },
+        {
+          method: "POST",
+          // body: JSON.stringify(this.auth),
+          headers: {
+            "x-password": this.auth.password,
+          },
+        }
+      );
+      if (res.status !== 200) {
+        throw new Error("Login failed");
+      }
+      jwt = await res.text();
+      this.setCacheJwt?.(jwt);
     }
-    jwt = await res.text();
-    this.setCacheJwt?.(jwt);
     return jwt;
   }
 
@@ -121,7 +138,11 @@ export class FileBrowser {
     return join("/", this.root, path);
   }
 
-  async getResources(source: string, path: string, withContent?: boolean) {
+  async getResources(
+    source: string,
+    path: string,
+    withContent?: boolean
+  ): Promise<FileBrowserResponse> {
     const query: Record<string, string> = {
       path: encodeURIComponent(this.getCurrentDir(path)),
       source,
@@ -134,13 +155,19 @@ export class FileBrowser {
       query,
     });
     if (res.status !== 200) {
-      return null;
+      return {
+        status: res.status,
+        msg: await res.text(),
+      };
     }
     const result = (await res.json()) as Omit<ResourceDto, "itemType">;
     return {
-      ...result,
-      itemType: result.type === "directory" ? "folder" : "file",
-    } as ResourceDto;
+      status: res.status,
+      data: {
+        ...result,
+        itemType: result.type === "directory" ? "folder" : "file",
+      } as ResourceDto,
+    };
   }
 
   async getBlob(source: string, path: string) {

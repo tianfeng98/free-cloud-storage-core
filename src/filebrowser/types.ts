@@ -28,3 +28,9 @@ interface ItemBase {
   type: string;
   hidden: boolean;
 }
+
+export type FileBrowserResponse = {
+  status: number;
+  data?: ResourceDto | null;
+  msg?: string;
+};

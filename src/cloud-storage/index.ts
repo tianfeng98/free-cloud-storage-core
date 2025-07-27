@@ -1,4 +1,9 @@
-import { type FCSFile, type FCSItem, type JSONLinkFile } from "@/types";
+import {
+  type FCSFile,
+  type FCSItem,
+  type FCSResponse,
+  type JSONLinkFile,
+} from "@/types";
 import { resolve } from "path-browserify";
 import { FileBrowser, type FileBrowserOptions } from "../filebrowser";
 import {
@@ -42,23 +47,36 @@ export class CloudStorage {
   async getResources(
     source: string,
     ...pathList: string[]
-  ): Promise<FCSItem | null> {
+  ): Promise<FCSResponse> {
     const { localPathList } = this.parsePathList(...pathList);
     const resourceInfo = await this.parseResourceInfo(source, ...localPathList);
-    if (!resourceInfo) {
-      return null;
+    if (resourceInfo.type === "error") {
+      return {
+        status: resourceInfo.status,
+        msg: resourceInfo.msg,
+      };
     }
     if (resourceInfo.type === "local") {
-      return resourceInfo.resources;
+      return {
+        status: 200,
+        data: resourceInfo.resources,
+      };
     }
     const provider = this.providerMap.get(resourceInfo.providerInput.provider);
     if (!provider) {
-      return null;
+      return {
+        status: 404,
+        msg: `Provider ${resourceInfo.providerInput.provider} is not found`,
+      };
     }
-    return provider.getResources(
+    const data = await provider.getResources(
       resourceInfo.providerInput,
       resourceInfo.resources
     );
+    return {
+      status: 200,
+      data,
+    };
   }
 
   async getBlob(
@@ -73,6 +91,12 @@ export class CloudStorage {
       return new Response(text, {
         status: 404,
         statusText: text,
+      });
+    }
+    if (resourceInfo.type === "error") {
+      return new Response(resourceInfo.msg, {
+        status: resourceInfo.status,
+        statusText: resourceInfo.msg,
       });
     }
     if (resourceInfo.type === "local") {
@@ -95,38 +119,72 @@ export class CloudStorage {
   ): Promise<
     | { type: "local"; resources: FCSItem }
     | { type: "remote"; resources: FCSFile; providerInput: ProviderInput }
-    | null
+    | { type: "error"; status: number; msg?: string }
   > {
     let pathStr = resolve("/", ...pathList);
-    let resources: FCSItem | null = null;
+    let result: FCSResponse | null = null;
     if (!pathStr.endsWith(this.remoteFileExtension)) {
-      resources = await this.fileBrowser.getResources(source, pathStr);
-      if (resources) {
+      result = await this.fileBrowser.getResources(source, pathStr);
+      if (result.status === 200) {
+        if (result.data) {
+          return {
+            type: "local",
+            resources: result.data,
+          };
+        }
         return {
-          type: "local",
-          resources,
+          type: "error",
+          status: 404,
+          msg: "File not found",
+        };
+      }
+      if (result.status !== 404) {
+        return {
+          type: "error",
+          status: result.status,
+          msg: result.msg,
         };
       }
       pathStr = `${pathStr}${this.remoteFileExtension}`;
     }
-    resources = await this.fileBrowser.getResources(source, pathStr, true);
-    if (resources && resources.itemType !== "folder" && resources.content) {
+    result = await this.fileBrowser.getResources(source, pathStr, true);
+    if (result.status === 200) {
+      if (!result.data) {
+        return {
+          type: "error",
+          status: 404,
+          msg: "File not found",
+        };
+      }
+      if (result.data.itemType === "folder") {
+        return {
+          type: "local",
+          resources: result.data,
+        };
+      }
+      if (!result.data.content) {
+        return {
+          type: "error",
+          status: 404,
+          msg: "JsonLinkFile is empty",
+        };
+      }
       let jsonLinkFile: JSONLinkFile | null = null;
       try {
-        jsonLinkFile = JSON.parse(resources.content);
+        jsonLinkFile = JSON.parse(result.data.content);
         if (jsonLinkFile) {
           const { url, pw: pwd, ...otherParams } = jsonLinkFile;
           const { searchParams } = new URL(url);
           const pw =
             pwd ||
-            ["p", "pw", "pwd", "passowrd"]
+            ["passowrd", "pwd", "pw", "p"]
               .map((p) => searchParams.get(p))
               .filter(Boolean)
               .at(0) ||
             "";
           return {
             type: "remote",
-            resources,
+            resources: result.data,
             providerInput: {
               url,
               pw,
@@ -134,11 +192,24 @@ export class CloudStorage {
             },
           };
         }
+        return {
+          type: "error",
+          status: 404,
+          msg: "JsonLinkFile is empty",
+        };
       } catch (e) {
-        console.error("Parse jsonLinkFile error", e);
+        return {
+          type: "error",
+          status: 500,
+          msg: `JsonLinkFile is not a valid JSON: ${e}`,
+        };
       }
     }
-    return null;
+    return {
+      type: "error",
+      status: result.status,
+      msg: result.msg,
+    };
   }
 
   private parsePathList(...pathList: string[]) {
