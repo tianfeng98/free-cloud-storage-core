@@ -1,6 +1,6 @@
 {
-  "name": "free-cloud-storage-core",
-  "version": "0.0.2",
+  "name": "@tf98/free-cloud-storage-core",
+  "version": "0.0.1",
   "description": "Provide a unified API for accessing some free cloud storage services.提供统一的API接入一些免费的云盘",
   "main": "dist/cjs/index.js",
   "types": "dist/cjs/index.d.ts",
@@ -20,7 +20,8 @@
     "compiled"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://verdaccio.tf98.top"
   },
   "devDependencies": {
     "@types/path-browserify": "^1.0.3",
