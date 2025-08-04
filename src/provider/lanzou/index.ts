@@ -12,15 +12,27 @@ import { getFolderResponse } from "./folder";
 import { LanzouAPI, type LanzouFile, type ParseFunctionProps } from "./type";
 import { fetchHtml, getApiScriptCode } from "./utils";
 
+const fileSizeUnitMap: Record<string, number> = {
+  B: 1,
+  K: 1024,
+  KB: 1024,
+  M: 1024 * 1024,
+  MB: 1024 * 1024,
+  G: 1024 * 1024 * 1024,
+  GB: 1024 * 1024 * 1024,
+};
+
 const convertLanzouFile2FCSFile = (
   file: LanzouFile,
   { path, source }: Pick<FCSFile, "path" | "source">
 ): FCSFile => {
   const { fileName, fileSize, uploadTime, url } = file;
+  const [sizeStr, unit] = fileSize.split(" ").filter(Boolean);
+  const size = +sizeStr * fileSizeUnitMap[unit.toUpperCase()];
   return {
     path,
     name: fileName,
-    size: +fileSize,
+    size,
     modified: uploadTime,
     type: "blob",
     content: url,

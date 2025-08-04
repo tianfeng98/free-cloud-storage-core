@@ -60,12 +60,15 @@ export const getLanzouFileResult = async (
   const postResponse = await browserFetch(urlObj.toString(), {
     method: "POST",
     body: new URLSearchParams(params),
+    pageUrl: url,
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
   });
 
   const resData = (await postResponse.json()) as FileResultDto;
+
+  console.log(resData.url.length);
 
   if (resData.zt !== 1) {
     throw new Error(resData.inf);
