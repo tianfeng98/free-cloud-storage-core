@@ -36,7 +36,7 @@ export const getCTFolder = async (
           name,
           size: +fileSize,
           modified: updateTime,
-          type: "blob",
+          type: "provider-ctfile",
           content: "",
           hidden: false,
           source: fcsFile.source,

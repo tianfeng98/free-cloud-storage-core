@@ -45,7 +45,7 @@ export const getCTFile = async (
     name: file_name,
     size: +file_size,
     modified: file_time,
-    type: "blob",
+    type: "provider-ctfile",
     content: downloadUrl,
     itemType: "file",
     hidden: false,

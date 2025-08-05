@@ -1,6 +1,6 @@
 {
   "name": "@tf98/free-cloud-storage-core",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Provide a unified API for accessing some free cloud storage services.提供统一的API接入一些免费的云盘",
   "main": "dist/cjs/index.js",
   "types": "dist/cjs/index.d.ts",

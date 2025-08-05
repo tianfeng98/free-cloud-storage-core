@@ -34,7 +34,7 @@ const convertLanzouFile2FCSFile = (
     name: fileName,
     size,
     modified: uploadTime,
-    type: "blob",
+    type: "provider-lanzou",
     content: url,
     itemType: "file",
     hidden: false,
